@@ -70,23 +70,30 @@ function Find-ReleaseDefinition {
         [Parameter(Position=1)][string]$CLike="*"
     ) 
 
-    $config = [VstsConfig]::load() 
-    $uri = "https://${config.accountName}.vsrm.visualstudio.com/${project}/_apis/release/definitions?api-version=4.1-preview.3"
-    $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)}
+    $config = Get-VstsConfig
+    $uri = "https://$($config.AccountName).vsrm.visualstudio.com/$($config.Project)/_apis/release/definitions?api-version=4.1-preview.3"
+    $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
+    if($result -Is [String]) {
+        Write-Error $result
+        throw "Rest Method Failed!"
+    }
+    
     $result.value | Where-Object -Property name -CLike $CLike
+    return $result
 }
 # 
-# function New-Release {
-#     [CmdletBinding()]
-#     Param(
-#         [Parameter(Position=1, Mandatory=$true)][string]$definitionId
-#     )
-# 
-#     $uri = "https://${accountName}.vsrm.visualstudio.com/${project}/_apis/release/releases?api-version=4.1-preview.6"
-#     $body = ConvertTo-Json @{ definitionId = $definitionId }    
-#     Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)} 
-# }
-# 
+function New-Release {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=1, Mandatory=$true)][int]$definitionId
+    )
+
+    $config = Get-VstsConfig
+    $uri = "https://$($config.AccountName).vsrm.visualstudio.com/$($config.Project)/_apis/release/releases?api-version=4.1-preview.6"
+    $body = ConvertTo-Json @{ definitionId = "$definitionId" }    
+    Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json" -Headers $config.GetHeaders()
+}
+
 # function Find-BuildDefinition {
 #     [CmdletBinding()]
 #     Param(
@@ -146,4 +153,5 @@ function Find-ReleaseDefinition {
 Export-ModuleMember VstsConfig
 Export-ModuleMember Set-VstsConfig
 Export-ModuleMember Get-VstsConfig
-Export-ModuleMember Find-MyTestFunction
+Export-ModuleMember Find-ReleaseDefinition
+Export-ModuleMember New-Release
