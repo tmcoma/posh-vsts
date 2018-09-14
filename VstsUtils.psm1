@@ -94,6 +94,22 @@ function New-Release {
     Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json" -Headers $config.GetHeaders()
 }
 
+function Get-WorkItem {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=1, Mandatory=$true)][int]$id
+    )
+    $config = Get-VstsConfig
+    $uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/workitems/${id}?api-version=4.1"
+    write-verbose $uri
+    $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
+    if($result -Is [String]) {
+        Write-Error $result
+        throw "Rest Method Failed!"
+    }
+    return $result
+}
+
 # function Find-BuildDefinition {
 #     [CmdletBinding()]
 #     Param(
@@ -155,3 +171,4 @@ Export-ModuleMember Set-VstsConfig
 Export-ModuleMember Get-VstsConfig
 Export-ModuleMember Find-ReleaseDefinition
 Export-ModuleMember New-Release
+Export-ModuleMember Get-WorkItem
