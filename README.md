@@ -1,21 +1,25 @@
 # POSH-Vsts
 Powershell extension for VSTS
 
-# Usage
+# Example Usage
+
+Initial setup
 ```powershell
-PS1> import-module -force VstsUtils.psm1
+PS> import-module -force VstsUtils.psm1
 
 # encrypts and stores this information in your home directory
 # so it can be used in subsequent calls
-PS1> Set-VstsConfig
+PS> Set-VstsConfig
 
 Supply values for the following parameters:
 AccountName: tommclaughlin
 Project: testproject
 User: tom.mclaughlin@nebraska.gov
 Token: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-PS1> Get-WorkItem 1 | ConvertTo-Json
+```
+### Get Work Item
+```powershell
+PS> Get-WorkItem 1 | ConvertTo-Json
 {
     "id":  1,
     "rev":  15,
@@ -63,6 +67,7 @@ PS1> Get-WorkItem 1 | ConvertTo-Json
                },
     "url":  "https://dev.azure.com/tommclaughlin/_apis/wit/workItems/1"
 }
+
 ```
 
 
