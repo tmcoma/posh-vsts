@@ -64,6 +64,7 @@ function Set-VstsConfig {
 }
 
 
+
 function Find-ReleaseDefinition {
     [CmdletBinding()]
     Param(
@@ -97,10 +98,23 @@ function New-Release {
 function Get-WorkItem {
     [CmdletBinding()]
     Param(
-        [Parameter(Position=1, Mandatory=$true)][int]$id
+        [Parameter(Position=1, Mandatory=$true)][int]$id,
+	[string[]]$fields,
+	[string[]]$expand # None, Relations, Fields, Links, All
+
     )
     $config = Get-VstsConfig
     $uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/workitems/${id}?api-version=4.1"
+
+    if( $fields ){
+	$uri += "&fields=$fields"
+    }
+
+   if( $expand ){
+	# this needs a literal $ in the variable name!
+	$uri += "&`$expand=$expand"
+   }
+
     write-verbose $uri
     $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
     if($result -Is [String]) {
@@ -110,61 +124,6 @@ function Get-WorkItem {
     return $result
 }
 
-# function Find-BuildDefinition {
-#     [CmdletBinding()]
-#     Param(
-#         [Parameter(Position=1)][string]$CLike="*"
-#     ) 
-#     $uri = "https://${accountName}.visualstudio.com/${project}/_apis/build/definitions?api-version=4.1"
-#     $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)}
-#     $result.value | Where-Object -Property name -CLike $CLike
-# }
-# 
-# function New-Build {
-#     [CmdletBinding()]
-#     Param(
-#         [Parameter(Position=1, Mandatory=$true)][string]$definitionId
-#     )
-# 
-#     $uri = "https://${accountName}.visualstudio.com/${project}/_apis/release/releases?api-version=4.1"
-#     $body = ConvertTo-Json @{ definitionId = $definitionId }    
-#     Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json" -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)} 
-# }
-# 
-# function Get-VstsConfig {
-#     
-# }
-# 
-# 
-# 
-# function Set-VstsConfig {
-#    [Parameter(Required=$true)][string]$accountName,
-#    [Parameter(Required=$true)][string]$project,
-#    [Parameter(Required=$true)][string]$user,
-#    [Parameter(Required=$true)][string]$token
-# 
-#     @{ 
-#        accountName = $accountName,
-#        project=$project,
-#        user=$user,
-#        token=$token 
-#     }
-#     ConvertTo-Json
-# }
-# 
-# function Invoke-VstsService {
-#     [CmdletBinding()]
-#     param(
-#         [Parameter(Mandatory=$true)][string]$Uri,
-#         [Parameter(Mandatory=$true)][string]$Method 
-#     )
-# }
-# 
-# Export-ModuleMember Find-ReleaseDefinition
-# Export-ModuleMember New-Release
-# 
-# Export-ModuleMember Find-BuildDefinition
-# Export-ModuleMember New-Build
 
 Export-ModuleMember VstsConfig
 Export-ModuleMember Set-VstsConfig
