@@ -124,6 +124,14 @@ function Get-WorkItem {
     return $result
 }
 
+function Get-WorkItemFields {
+    [CmdletBinding()]
+	$config = Get-VstsConfig
+
+	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/fields?api-version=4.1"
+	Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -Verbose -Debug
+}
+
 <#
 .DESCRIPTION
 Creates a new Work Item
@@ -132,34 +140,54 @@ Creates a new Work Item
 The type of work item, e.g. User Story, Bug, Task
 
 .PARAMETER fields
-Map of fields
-{
-	"System.Title":"My Task",
-	"System.Description":"Create new thing"
-	"System.AssignedTo":"Tom McLaughlin",
+A map of fields, e.g.
+@{ 
+	"System.Title"="my task"
+	"System.Description"="my description"
+	"System.AssignedTo"="tom.mclaughlin@nebraska.gov" 
 }
+
+.PARAMETER validateOnly
+Indicate if you only want to validate the changes without saving the work item
+
+.PARAMETER suppressNotifications
+Do not fire any notifications for this change
+
 #>
 function New-WorkItem {
     [CmdletBinding()]
     Param(
-		[Parameter(Mandatory=$true)][string]$type,
-		$fields
+		[string]$type="Task",
+		[Parameter(Mandatory=$true,Position=0)]$fields,
+		[switch]$validateOnly=$false,
+		[switch]$suppressNotifications=$false
+
     )
     $config = Get-VstsConfig
+	# we really do need the literal `$` in the url on the type! 
 	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/workitems/`$$($type)?api-version=4.1"
+	if($validateOnly){
+		$uri += "&validateOnly=true"
+	}
+
+	if($suppressNotifications){
+		$uri += "&suppressNotifications=true"
+	}
+
 	write-verbose $uri
-	$patch = @(@{
-		op="add"
-		path="/fields/System.Title"
-		from=$null
-		value="Sample task"
-	})
+	$patches = New-Object System.Collections.Generic.List[System.Object] 
+	foreach($e in $fields.GetEnumerator()){
+		$patches.Add(@{
+			op="add"
+			path="/fields/$($e.Name)"
+			from=$null
+			value=$e.Value
+		})
+	}
 
-	$body=ConvertTo-Json $patch
-	write-output $body
-	write-output $config.getHeaders()
+	$body=ConvertTo-Json $patches
+	write-verbose $body
 	Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json-patch+json" -Headers $config.GetHeaders() -Verbose -Debug
-
 }
 
 Export-ModuleMember VstsConfig
@@ -168,4 +196,5 @@ Export-ModuleMember Get-VstsConfig
 Export-ModuleMember Find-ReleaseDefinition
 Export-ModuleMember New-Release
 Export-ModuleMember Get-WorkItem
+Export-ModuleMember Get-WorkItemFields
 Export-ModuleMember New-WorkItem
