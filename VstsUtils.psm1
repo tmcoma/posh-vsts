@@ -124,6 +124,43 @@ function Get-WorkItem {
     return $result
 }
 
+<#
+.DESCRIPTION
+Creates a new Work Item
+
+.PARAMETER type
+The type of work item, e.g. User Story, Bug, Task
+
+.PARAMETER fields
+Map of fields
+{
+	"System.Title":"My Task",
+	"System.Description":"Create new thing"
+	"System.AssignedTo":"Tom McLaughlin",
+}
+#>
+function New-WorkItem {
+    [CmdletBinding()]
+    Param(
+		[Parameter(Mandatory=$true)][string]$type,
+		$fields
+    )
+    $config = Get-VstsConfig
+	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/workitems/`$$($type)?api-version=4.1"
+	write-verbose $uri
+	$patch = @(@{
+		op="add"
+		path="/fields/System.Title"
+		from=$null
+		value="Sample task"
+	})
+
+	$body=ConvertTo-Json $patch
+	write-output $body
+	write-output $config.getHeaders()
+	Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json-patch+json" -Headers $config.GetHeaders() -Verbose -Debug
+
+}
 
 Export-ModuleMember VstsConfig
 Export-ModuleMember Set-VstsConfig
@@ -131,3 +168,4 @@ Export-ModuleMember Get-VstsConfig
 Export-ModuleMember Find-ReleaseDefinition
 Export-ModuleMember New-Release
 Export-ModuleMember Get-WorkItem
+Export-ModuleMember New-WorkItem
