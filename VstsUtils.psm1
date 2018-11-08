@@ -133,7 +133,98 @@ function Get-WorkItemFields {
 }
 
 <#
-.DESCRIPTION
+.SYNOPSIS
+Gets all the user accounts in the organization (previously called an "account" in VSTS)
+
+.NOTES
+This function hasn't been tested when a continuation token is required
+
+.PARAMETER subjectTypes
+list of user subject subtypes to reduce the retrieved results, e.g. msa’, ‘aad’, ‘svc’ (service identity), ‘imp’ (imported identity), etc.
+
+.EXAMPLE
+PS1>  Find-AzureDevOpsUsers
+subjectKind   : user
+metaType      : member
+domain        : 043207df-e689-4bf6-9020-01038f11f0b1
+principalName : tom.mclaughlin@Nebraska.gov
+mailAddress   : tom.mclaughlin@Nebraska.gov
+origin        : aad
+originId      : 27da2ad9-ee76-48cd-98b8-2df94e7f998a
+displayName   : McLaughlin, Tom
+_links        : @{self=; memberships=; membershipState=; storageKey=; avatar=}
+url           : https://vssps.dev.azure.com/tommclaughlin/_apis/Graph/Users/aad.ZDZmNGY4MjAtZDk0Zi03ZjJiLWE1ZjQtMDBkY2IzYzMwOTk4
+descriptor    : aad.ZDZmNGY4MjAtZDk0Zi03ZjJiLWE1ZjQtMDBkY2IzYzMwOTk4
+
+subjectKind   : user
+domain        : AgentPool
+principalName : b2dcf18c-8d98-4339-96fe-4dc6581a93de
+mailAddress   :
+origin        : vsts
+originId      : b74eda1e-0e2c-4fc1-a554-23f0f3f0b1ff
+displayName   : Agent Pool Service (3)
+_links        : @{self=; memberships=; membershipState=; storageKey=; avatar=}
+url           : https://vssps.dev.azure.com/tommclaughlin/_apis/Graph/Users/svc.NjM2YjQ3ODQtYzJjYi00MzA5LTk4YmMtN2ZhOGU1NTliNzQ4OkFnZW50UG9vbDpiMmRjZjE4Yy04ZDk4LTQzMzktOTZmZS00ZGM2NTgxYTkzZGU
+descriptor    : svc.NjM2YjQ3ODQtYzJjYi00MzA5LTk4YmMtN2ZhOGU1NTliNzQ4OkFnZW50UG9vbDpiMmRjZjE4Yy04ZDk4LTQzMzktOTZmZS00ZGM2NTgxYTkzZGU
+
+.EXAMPLE
+# only get azure active directory users (ignore the service accounts for stuff like pools, builds, etc)
+PS1> Find-AzureDevOpsUsers -subjectTypes aad
+
+.EXAMPLE
+# search for AAD users by email address 
+$users=Get-AllAzureDevOpsUsers -Verbose -subjectTypes aad
+$users | where-object -Property mailAddress -like 'tom.mclaughlin@nebraska.gov'
+
+subjectKind   : user
+metaType      : member
+domain        : 043207df-e689-4bf6-9020-01038f11f0b1
+principalName : tom.mclaughlin@Nebraska.gov
+mailAddress   : tom.mclaughlin@Nebraska.gov
+origin        : aad
+originId      : 27da2ad9-ee76-48cd-98b8-2df94e7f998a
+displayName   : McLaughlin, Tom
+_links        : @{self=; memberships=; membershipState=; storageKey=; avatar=}
+url           : https://vssps.dev.azure.com/tommclaughlin/_apis/Graph/Users/aad.ZDZmNGY4MjAtZDk0Zi03ZjJiLWE1ZjQtMDBkY2IzYzMwOTk4
+descriptor    : aad.ZDZmNGY4MjAtZDk0Zi03ZjJiLWE1ZjQtMDBkY2IzYzMwOTk4
+#>
+function Get-AllAzureDevOpsUsers {
+    [CmdletBinding()]
+	Param(
+		[string[]]$subjectTypes
+	)
+	$config = Get-VstsConfig
+	$baseuri= "https://vssps.dev.azure.com/$($config.AccountName)/_apis/graph/users?api-version=4.1-preview.1"
+
+	$body=ConvertTo-Json $lookup
+	write-verbose $body
+	
+	$all = New-Object System.Collections.Generic.List[System.Object] 
+#	$val=Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -ResponseHeadersVariable ResponseHeaders -Verbose:$VerbosePreference -Debug
+	do {
+		if($continuationToken){
+			$uri="$baseuri&continuationToken=$continuationToken"
+		} else {
+			$uri=$baseuri
+		}
+
+		if($subjectTypes){
+			$uri += "&subjectTypes=" + ($subjectTypes -join ',')
+		}
+
+		$result=Invoke-WebRequest -Uri $uri -Headers $config.GetHeaders() -Verbose:$VerbosePreference
+		$content = ConvertFrom-Json $result.Content
+		if($content.count -gt 0){
+			$all.add($content.value)
+		}
+		$continuationToken = $result.headers['X-MS-ContinuationToken']
+	} while($continuationToken)
+
+	return $all
+}
+
+<#
+.SYNOPSIS
 Creates a new Work Item
 
 .PARAMETER type
@@ -198,3 +289,4 @@ Export-ModuleMember New-Release
 Export-ModuleMember Get-WorkItem
 Export-ModuleMember Get-WorkItemFields
 Export-ModuleMember New-WorkItem
+Export-ModuleMember Get-AllAzureDevOpsUsers 
