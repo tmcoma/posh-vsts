@@ -129,7 +129,7 @@ function Get-WorkItemFields {
 	$config = Get-VstsConfig
 
 	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/fields?api-version=4.1"
-	Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -Verbose -Debug
+	Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -Verbose:$VerbosePreference 
 }
 
 <#
@@ -278,7 +278,7 @@ function New-WorkItem {
 
 	$body=ConvertTo-Json $patches
 	write-verbose $body
-	Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json-patch+json" -Headers $config.GetHeaders() -Verbose -Debug
+	Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json-patch+json" -Headers $config.GetHeaders() -Verbose:$VerbosePreference -Debug
 }
 
 Export-ModuleMember VstsConfig
