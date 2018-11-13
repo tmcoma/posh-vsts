@@ -275,6 +275,10 @@ Indicate if you only want to validate the changes without saving the work item
 .PARAMETER suppressNotifications
 Do not fire any notifications for this change
 
+.PARAMETER bypassRules
+Do not enforce the work item type rules on this update
+
+
 #>
 function New-WorkItem {
     [CmdletBinding()]
@@ -282,6 +286,7 @@ function New-WorkItem {
 		[string]$type="Task",
 		[Parameter(Mandatory=$true,Position=0)]$fields,
 		[switch]$validateOnly=$false,
+		[switch]$bypassRules=$false,
 		[switch]$suppressNotifications=$false
 
     )
@@ -294,6 +299,10 @@ function New-WorkItem {
 
 	if($suppressNotifications){
 		$uri += "&suppressNotifications=true"
+	}
+
+	if($bypassRules){
+		$uri += "&bypassRules=true"
 	}
 
 	write-verbose $uri
