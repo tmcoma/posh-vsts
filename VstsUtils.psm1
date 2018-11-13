@@ -1,5 +1,5 @@
 class VstsConfig {
-    static [String] $Filename = "${env:HOME}\.vsts-util-config.json"
+    static [String] $Filename = "${HOME}\.vsts-util-config.json"
     
     [String] $AccountName
     [String] $Project
@@ -129,7 +129,38 @@ function Get-WorkItemFields {
 	$config = Get-VstsConfig
 
 	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/fields?api-version=4.1"
-	Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -Verbose:$VerbosePreference 
+    Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -Verbose:$VerbosePreference 
+}
+
+<#
+.SYNOPSIS
+Returns the list of work item types.
+
+
+.EXAMPLE
+Set-VstsConfig
+Get-WorkItemTypes
+
+.EXAMPLE
+# deal with max length on convertfrom-json
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")        
+$jsonserial= New-Object -TypeName System.Web.Script.Serialization.JavaScriptSerializer 
+$jsonserial.MaxJsonLength  = 67108864
+$WorkItemTypes = Get-WorkItemTypes
+$types=$jsonserial.DeserializeObject($WorkItemTypes)
+
+# print work item display name and system name
+$types.value | % { write-output "$($_.name)=$($_.referenceName)"  }
+
+.NOTES
+That the result may be large enough That ConvertFrom-Json will fail to handle it.
+#>
+function Get-WorkItemTypes {
+    [CmdletBinding()]
+	$config = Get-VstsConfig
+
+	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/workitemtypes?api-version=4.1"
+    Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -Verbose:$VerbosePreference 
 }
 
 <#
@@ -140,7 +171,7 @@ Gets all the user accounts in the organization (previously called an "account" i
 This function hasn't been tested when a continuation token is required
 
 .PARAMETER subjectTypes
-list of user subject subtypes to reduce the retrieved results, e.g. msa’, ‘aad’, ‘svc’ (service identity), ‘imp’ (imported identity), etc.
+list of user subject subtypes to reduce the retrieved results, e.g. msaï¿½, ï¿½aadï¿½, ï¿½svcï¿½ (service identity), ï¿½impï¿½ (imported identity), etc.
 
 .EXAMPLE
 PS1>  Find-AzureDevOpsUsers
@@ -288,5 +319,6 @@ Export-ModuleMember Find-ReleaseDefinition
 Export-ModuleMember New-Release
 Export-ModuleMember Get-WorkItem
 Export-ModuleMember Get-WorkItemFields
+Export-ModuleMember Get-WorkItemTypes
 Export-ModuleMember New-WorkItem
 Export-ModuleMember Get-AllAzureDevOpsUsers 
