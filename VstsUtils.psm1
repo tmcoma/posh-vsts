@@ -385,7 +385,7 @@ The name of the board to retrieve, e.g. "Stories"
 The name of the team.  If not specified, the default team will be used.
 
 .EXAMPLE
-(Get-KanbanColumns -team "Netscaler Forms" -board "Stories").value
+(Get-KanbanColumns -board Stories -team "FakeTeam").value | convertto-json
 
 .LINK
 https://docs.microsoft.com/en-us/rest/api/vsts/work/columns?view=vsts-rest-4.1
@@ -408,6 +408,38 @@ function Get-KanbanColumns {
 
 }
 
+<#
+.SYNOPSIS
+Sets Kanban columns for Board
+
+.DESCRIPTION
+Use this along with Get-KanbanColumns.  You'll need to get the original list of columns, then modify it.  There is no
+"add" or "remove" column feature here yet. 
+
+.EXAMPLE
+(Get-KanbanColumns -board Stories -team "FakeTeam").value | convertto-json | Out-File -FilePath cols.json
+# edit the file to match whatever columns we want...
+# note that you can't change the Incoming or Outgoing columns
+$cols = get-content -raw cols.json | convertfrom-json 
+(Set-KanbanColumns -Team Faketeam -Board Stories -Columns $cols -Verbose).value
+#>
+function Set-KanbanColumns {
+    [CmdletBinding()]
+	Param(
+        [Parameter(Mandatory, Position=0)][string]$board,
+        [Object[]]$columns,
+        [string]$team
+	)
+    $config = Get-VstsConfig
+
+	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/$team/_apis/work/boards/$board/columns?api-version=4.1"
+
+    $body = ConvertTo-Json $columns
+    Write-Verbose $body
+    Invoke-RestMethod -Uri $uri -Method PUT -body $body -Headers $config.GetHeaders() -Verbose:$VerbosePreference -Debug -ContentType "application/json"
+
+}
+
 Export-ModuleMember VstsConfig
 Export-ModuleMember Set-VstsConfig
 Export-ModuleMember Get-VstsConfig
@@ -419,4 +451,5 @@ Export-ModuleMember Get-WorkItemTypes
 Export-ModuleMember New-WorkItem
 Export-ModuleMember Get-AllAzureDevOpsUsers 
 Export-ModuleMember Get-KanbanColumns
+Export-ModuleMember Set-KanbanColumns
 Export-ModuleMember Get-KanbanBoards
