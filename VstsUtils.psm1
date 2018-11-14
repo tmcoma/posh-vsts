@@ -319,6 +319,93 @@ function New-WorkItem {
 	$body=ConvertTo-Json $patches
 	write-verbose $body
 	Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json-patch+json" -Headers $config.GetHeaders() -Verbose:$VerbosePreference -Debug
+
+}
+<#
+.SYNOPSIS
+Get the list of boards for the current project
+
+.PARAMETER team
+The team whose boards are to be retrieved.  If not specified, the default team's board will be retrieved.
+
+.EXAMPLE
+# get the list of boards (name only)
+(Get-KanbanBoards "Access Manager Forms").value.name
+Stories
+Epics
+Features
+
+.EXAMPLE
+# get the boards and their reference urls
+(Get-KanbanBoards).value | ConvertTo-Json
+[
+    {
+        "id":  "b86958a4-9b78-46b2-869f-b4b6384ef293",
+        "url":  "https://dev.azure.com/tommclaughlin/dc5329bd-bc74-48bb-af94-500843428988/09651aab-8486-42ec-a07e-8c94ea6f3709/_apis/work/boards/b86958a4-9b78-46b2-869f-b4b6384ef293",
+        "name":  "Stories"
+    },
+    {
+        "id":  "b31d634b-b573-4393-bfeb-5af850b9dbab",
+        "url":  "https://dev.azure.com/tommclaughlin/dc5329bd-bc74-48bb-af94-500843428988/09651aab-8486-42ec-a07e-8c94ea6f3709/_apis/work/boards/b31d634b-b573-4393-bfeb-5af850b9dbab",
+        "name":  "Epics"
+    },
+    {
+        "id":  "c2aef67c-637f-4295-bfef-e5d8c24fa7e8",
+        "url":  "https://dev.azure.com/tommclaughlin/dc5329bd-bc74-48bb-af94-500843428988/09651aab-8486-42ec-a07e-8c94ea6f3709/_apis/work/boards/c2aef67c-637f-4295-bfef-e5d8c24fa7e8",
+        "name":  "Features"
+    }
+]
+
+.LINK 
+https://docs.microsoft.com/en-us/rest/api/vsts/work/boards/list?view=vsts-rest-4.1
+
+.LINK
+Get-KanbanColumns
+
+#>
+function Get-KanbanBoards {
+    [CmdletBinding()]
+	Param(
+        [Parameter(Position=0)][string]$team
+    )
+
+    $config = Get-VstsConfig
+	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/$team/_apis/work/boards?api-version=4.1"
+
+    Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -Verbose:$VerbosePreference
+}
+
+<#
+.SYNOPSIS
+Gets the columns of a particular board
+.PARAMETER board
+The name of the board to retrieve, e.g. "Stories"
+
+.PARAMETER team
+The name of the team.  If not specified, the default team will be used.
+
+.EXAMPLE
+(Get-KanbanColumns -team "Netscaler Forms" -board "Stories").value
+
+.LINK
+https://docs.microsoft.com/en-us/rest/api/vsts/work/columns?view=vsts-rest-4.1
+
+.LINK
+Get-KanbanBoards
+
+#>
+function Get-KanbanColumns {
+    [CmdletBinding()]
+	Param(
+        [Parameter(Mandatory, Position=0)][string]$board,
+        [string]$team
+	)
+    $config = Get-VstsConfig
+
+	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/$team/_apis/work/boards/$board/columns?api-version=4.1"
+
+    Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -Verbose:$VerbosePreference -Debug
+
 }
 
 Export-ModuleMember VstsConfig
@@ -331,3 +418,5 @@ Export-ModuleMember Get-WorkItemFields
 Export-ModuleMember Get-WorkItemTypes
 Export-ModuleMember New-WorkItem
 Export-ModuleMember Get-AllAzureDevOpsUsers 
+Export-ModuleMember Get-KanbanColumns
+Export-ModuleMember Get-KanbanBoards
