@@ -440,6 +440,34 @@ function Set-KanbanColumns {
 
 }
 
+<#
+.SYNOPSIS
+Gets team settings, e.g. bugsBehavior, working days, backlog visiblity, default iteration.
+
+.EXAMPLE
+# get settings for the current project's default team
+Get-Teamsettings
+
+.EXAMPLE
+Get-Teamsettings "Netscaler Forms"
+
+.PARAMETER Team
+The team to retrieve.  If no team is given, gets the settings for the default team.
+
+.LINK
+https://docs.microsoft.com/en-us/rest/api/vsts/work/teamsettings/get?view=vsts-rest-4.1
+#>
+function Get-Teamsettings {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=0)][string]$team
+    )
+    $config = Get-VstsConfig
+    $uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/$team/_apis/work/teamsettings?api-version=4.1"
+
+    Invoke-RestMethod -Uri $uri -Method GET -Headers $config.GetHeaders() -Verbose:$VerbosePreference 
+}
+
 Export-ModuleMember VstsConfig
 Export-ModuleMember Set-VstsConfig
 Export-ModuleMember Get-VstsConfig
@@ -453,3 +481,4 @@ Export-ModuleMember Get-AllAzureDevOpsUsers
 Export-ModuleMember Get-KanbanColumns
 Export-ModuleMember Set-KanbanColumns
 Export-ModuleMember Get-KanbanBoards
+Export-ModuleMember Get-Teamsettings
