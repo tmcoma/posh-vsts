@@ -440,6 +440,72 @@ function Set-KanbanColumns {
 
 }
 
+<#
+.SYNOPSIS
+Gets team settings, e.g. bugsBehavior, working days, backlog visiblity, default iteration.
+
+.EXAMPLE
+# get settings for the current project's default team
+Get-Teamsettings
+
+.EXAMPLE
+Get-Teamsettings "Netscaler Forms"
+
+.PARAMETER Team
+The team to retrieve.  If no team is given, gets the settings for the default team.
+
+.LINK
+https://docs.microsoft.com/en-us/rest/api/vsts/work/teamsettings/get?view=vsts-rest-4.1
+#>
+function Get-Teamsettings {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=0)][string]$team
+    )
+    $config = Get-VstsConfig
+    $uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/$team/_apis/work/teamsettings?api-version=4.1"
+
+    Invoke-RestMethod -Uri $uri -Method GET -Headers $config.GetHeaders() -Verbose:$VerbosePreference 
+}
+
+<#
+.SYNOPSIS
+Update a team's settings, e.g. set its bugsBehavior
+
+.PARAMETER team
+The team whose settings are to be set.  If omitted, the project's default team will be used.
+
+.PARAMETER settings
+Settings to use.  See documentation link for details.
+
+.EXAMPLE
+# change setting for FakeTeam so that bugs are tracked with requirements (stories) rather
+# than with tasks (which would be "asTasks")
+Set-Teamsettings -verbose -team FakeTeam -settings @{ bugsBehavior="asRequirements" }
+
+.LINK
+https://docs.microsoft.com/en-us/rest/api/vsts/work/teamsettings/update?view=vsts-rest-4.1
+#>
+function Set-Teamsettings {
+    [CmdletBinding()]
+    Param(
+        [string]$team,
+        [Parameter(Mandatory=$true)]$settings
+    )
+
+    $config = Get-VstsConfig
+    $uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/$team/_apis/work/teamsettings?api-version=4.1"
+
+    if(!$team){
+        Write-Warning "Using default team for '$($config.project)'.  Use -Team to specify team." 
+    }
+
+    $body=ConvertTo-Json $settings
+    Write-Verbose $body
+    
+	Invoke-RestMethod -Uri $uri -Body $body -Method PATCH -ContentType "application/json" -Headers $config.GetHeaders() -Verbose:$VerbosePreference -Debug
+}
+
 Export-ModuleMember VstsConfig
 Export-ModuleMember Set-VstsConfig
 Export-ModuleMember Get-VstsConfig
@@ -453,3 +519,5 @@ Export-ModuleMember Get-AllAzureDevOpsUsers
 Export-ModuleMember Get-KanbanColumns
 Export-ModuleMember Set-KanbanColumns
 Export-ModuleMember Get-KanbanBoards
+Export-ModuleMember Get-Teamsettings
+Export-ModuleMember Set-Teamsettings
