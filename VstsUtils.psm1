@@ -171,7 +171,7 @@ Gets all the user accounts in the organization (previously called an "account" i
 This function hasn't been tested when a continuation token is required
 
 .PARAMETER subjectTypes
-list of user subject subtypes to reduce the retrieved results, e.g. msa�, �aad�, �svc� (service identity), �imp� (imported identity), etc.
+list of user subject subtypes to reduce the retrieved results, e.g. msa, aad, svc (service identity), imp (imported identity), etc.
 
 .EXAMPLE
 PS1>  Find-AzureDevOpsUsers
@@ -227,9 +227,6 @@ function Get-AllAzureDevOpsUsers {
 	$config = Get-VstsConfig
 	$baseuri= "https://vssps.dev.azure.com/$($config.AccountName)/_apis/graph/users?api-version=4.1-preview.1"
 
-	$body=ConvertTo-Json $lookup
-	write-verbose $body
-	
 	$all = New-Object System.Collections.Generic.List[System.Object] 
 #	$val=Invoke-RestMethod -Uri $uri -Method Get -Headers $config.GetHeaders() -ResponseHeadersVariable ResponseHeaders -Verbose:$VerbosePreference -Debug
 	do {
@@ -487,7 +484,7 @@ Set-Teamsettings -verbose -team FakeTeam -settings @{ bugsBehavior="asRequiremen
 https://docs.microsoft.com/en-us/rest/api/vsts/work/teamsettings/update?view=vsts-rest-4.1
 #>
 function Set-Teamsettings {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess=$true)]
     Param(
         [string]$team,
         [Parameter(Mandatory=$true)]$settings
@@ -502,8 +499,9 @@ function Set-Teamsettings {
 
     $body=ConvertTo-Json $settings
     Write-Verbose $body
-    
-	Invoke-RestMethod -Uri $uri -Body $body -Method PATCH -ContentType "application/json" -Headers $config.GetHeaders() -Verbose:$VerbosePreference -Debug
+    if($PSCmdlet.ShouldProcess("set team settings")){
+        Invoke-RestMethod -Uri $uri -Body $body -Method PATCH -ContentType "application/json" -Headers $config.GetHeaders() -Verbose:$VerbosePreference -Debug
+    }
 }
 
 Export-ModuleMember VstsConfig
