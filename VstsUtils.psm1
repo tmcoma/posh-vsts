@@ -64,15 +64,33 @@ function Set-VstsConfig {
 }
 
 
+<#
+.SYNOPSIS
+Pulls all the release definitions for a project and filters on the client side by name
 
+.PARAMETER CLike
+"where-object" clause
+
+.PARAMETER Project
+Project to use.  If left blank, defaults to what is in the config.
+
+.EXAMPLE
+Find-ReleaseDefinition -CLike '*' -Project rev-bit
+
+#>
 function Find-ReleaseDefinition {
     [CmdletBinding()]
     Param(
-        [Parameter(Position=1)][string]$CLike="*"
+        [Parameter(Position=1)][string]$CLike="*",
+		[string]$Project
     ) 
 
     $config = Get-VstsConfig
-    $uri = "https://$($config.AccountName).vsrm.visualstudio.com/$($config.Project)/_apis/release/definitions?api-version=4.1-preview.3"
+	if([string]::isNullOrEmpty($Project)){
+		$Project=$config.project
+	}
+
+    $uri = "https://$($config.AccountName).vsrm.visualstudio.com/$Project/_apis/release/definitions?api-version=4.1-preview.3"
     $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
     if($result -Is [String]) {
         Write-Error $result
@@ -82,7 +100,77 @@ function Find-ReleaseDefinition {
     $result.value | Where-Object -Property name -CLike $CLike
     return $result
 }
-# 
+
+<#
+.SYNOPSIS
+Gets a release definition by its numeric id.
+
+.PARAMETER Id
+The numeric id  of the release, at is it appears in its web url.
+
+.PARAMETER Project
+The project to query.  If not specified, uses the one in the config.
+
+.EXAMPLE
+Get-ReleaseDefinition 1 -Project rev-bit 3
+
+.EXAMPLE
+(Get-ReleaseDefinition -Project rev-bit 3).environments | ConvertTo-Json
+
+#>
+function Get-ReleaseDefinition {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true, Position=1)][int]$Id,
+		[string]$Project
+    ) 
+
+    $config = Get-VstsConfig
+	if([string]::isNullOrEmpty($Project)){
+		$Project=$config.project
+	}
+
+	$uri = "https://vsrm.dev.azure.com/$($config.AccountName)/$Project/_apis/release/definitions/$($Id)?api-version=5.0-preview.3"
+    $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
+    if($result -Is [String]) {
+        Write-Error $result
+        throw "Rest Method Failed!"
+    }
+    
+    return $result
+}
+
+
+<#
+.SYNOPSIS
+Pulls all the projects using the currently configured organization.
+
+.PARAMETER CLike
+An optional filter (by name), e.g. '*rev*'
+
+.EXAMPLE
+Find-Project 'rev-*'
+
+
+#>
+function Find-Project {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position=1)][string]$CLike="*"
+    ) 
+
+    $config = Get-VstsConfig
+    $uri = "https://dev.azure.com/$($config.AccountName)/_apis/projects?api-version=5.0-preview.3"
+    $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
+    if($result -Is [String]) {
+        Write-Error $result
+        throw "Rest Method Failed!"
+    }
+    
+    $result.value | Where-Object -Property name -CLike $CLike
+    return $result
+}
+ 
 function New-Release {
     [CmdletBinding()]
     Param(
@@ -508,6 +596,8 @@ Export-ModuleMember VstsConfig
 Export-ModuleMember Set-VstsConfig
 Export-ModuleMember Get-VstsConfig
 Export-ModuleMember Find-ReleaseDefinition
+Export-ModuleMember Get-ReleaseDefinition
+Export-ModuleMember Find-Project
 Export-ModuleMember New-Release
 Export-ModuleMember Get-WorkItem
 Export-ModuleMember Get-WorkItemFields
