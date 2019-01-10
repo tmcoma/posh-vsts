@@ -170,6 +170,62 @@ function Find-Project {
     $result.value | Where-Object -Property name -CLike $CLike
     return $result
 }
+
+
+function Get-ServiceEndpoint {
+    [CmdletBinding()]
+    Param(
+		[Parameter(Mandatory=$true, position=1)][string]$EndpointId,
+		[string]$Project,
+		[string]$Org
+    ) 
+    $config = Get-VstsConfig
+	
+	if( [string]::isNullOrWhitespace($Org) ){
+		$Org = $config.AccountName
+	}
+
+	if( [string]::isNullOrWhitespace($Project) ){
+		$Project = $config.Project
+	}
+
+	write-output "endpointid is $endpointid"
+    $uri = "https://dev.azure.com/$Org/$Project/_apis/serviceendpoint/endpoints/$($EndpointId)?api-version=5.0-preview.2"
+	write-output $uri
+    $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
+    if($result -Is [String]) {
+        Write-Error $result
+        throw "Rest Method Failed!"
+    }
+    
+    return $result
+}
+
+function Find-ServiceEndpoint {
+    [CmdletBinding()]
+    Param(
+		[string]$Project,
+		[string]$Org
+    ) 
+    $config = Get-VstsConfig
+	
+	if( [string]::isNullOrWhitespace($Org) ){
+		$Org = $config.AccountName
+	}
+
+	if( [string]::isNullOrWhitespace($Project) ){
+		$Project = $config.Project
+	}
+
+    $uri = "https://dev.azure.com/$Org/$Project/_apis/serviceendpoint/endpoints?api-version=5.0-preview.2"
+    $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
+    if($result -Is [String]) {
+        Write-Error $result
+        throw "Rest Method Failed!"
+    }
+    
+    return $result
+}
  
 function New-Release {
     [CmdletBinding()]
@@ -598,6 +654,8 @@ Export-ModuleMember Get-VstsConfig
 Export-ModuleMember Find-ReleaseDefinition
 Export-ModuleMember Get-ReleaseDefinition
 Export-ModuleMember Find-Project
+Export-ModuleMember Find-ServiceEndpoint
+Export-ModuleMember Get-ServiceEndpoint
 Export-ModuleMember New-Release
 Export-ModuleMember Get-WorkItem
 Export-ModuleMember Get-WorkItemFields
