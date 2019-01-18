@@ -201,6 +201,22 @@ function Get-ServiceEndpoint {
     return $result
 }
 
+<#
+.SYNOPSIS
+Returns all the service endpoints for a project.
+
+.PARAMETER Project
+Project to use.  Uses the default project from VstsConfig if not provided.
+
+.PARAMETER Org 
+Organization to use.  Uses the default organization from VstsConfig if not provided.
+
+.EXAMPLE
+List all endpoint names 
+
+(Find-ServiceEndpoint -Project MyProject).value.name
+
+#>
 function Find-ServiceEndpoint {
     [CmdletBinding()]
     Param(
@@ -236,6 +252,71 @@ function New-Release {
     $config = Get-VstsConfig
     $uri = "https://$($config.AccountName).vsrm.visualstudio.com/$($config.Project)/_apis/release/releases?api-version=4.1-preview.6"
     $body = ConvertTo-Json @{ definitionId = "$definitionId" }    
+    Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json" -Headers $config.GetHeaders()
+}
+
+<#
+.SYNOPSIS
+Creates a new SSH Connection in Service Endpoints.
+
+.EXAMPLE
+New-SshServiceEndpoint -Project "MyProject" -HostName "server-123.corp.com" -ConnectionName "server-123" -Username "tomcat" -PrivateKeyFile id_rsa
+#>
+function New-SshServiceEndpoint {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)][string]$ConnectionName,
+        [Parameter(Mandatory=$true)][string]$HostName,
+        [int]$Port=22,
+        [Parameter(Mandatory=$true)][string]$Username,
+        [Parameter(Mandatory=$true)][string]$PrivateKeyFile,
+        [string]$Password,
+        [string]$Project
+    )
+
+    # allow caller to override default project
+    if( [string]::isNullOrWhitespace($Project) ){
+		$Project = $config.Project
+    }
+
+    if ( ! (Test-Path $PrivateKeyFile)) {
+        throw "$PrivateKeyFile not found"
+    }
+
+    $PrivateKey = (Get-Content $PrivateKeyFile) -join '\n'
+    # read password if not provided
+    if( [string]::isNullOrWhitespace($Password) ){
+        $response = Read-host "Passhrase" -AsSecureString 
+        $Password = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($response))
+    }
+
+
+    $guid=[guid]::NewGuid()
+    $config = Get-VstsConfig
+    $uri = "https://dev.azure.com/$($config.AccountName)/$Project/_apis/serviceendpoint/endpoints?api-version=5.0-preview.2"
+    $body = @"
+{
+    "id": "$guid",
+    "type": "ssh",
+    "name": "$ConnectionName",
+    "url": "ssh://$HostName`:$port",
+    "data":{
+        "host": "$HostName",
+        "port": "$Port",
+        "privateKey": "$PrivateKey"
+    },
+    "authorization":{
+        "parameters": {
+            "username": "$Username",
+            "password": "$Password"
+
+        },
+        "scheme": "UsernamePassword"
+    },
+    "isShared": false
+}
+"@
+
     Invoke-RestMethod -Uri $uri -Body $body -Method Post -ContentType "application/json" -Headers $config.GetHeaders()
 }
 
@@ -656,6 +737,7 @@ Export-ModuleMember Get-ReleaseDefinition
 Export-ModuleMember Find-Project
 Export-ModuleMember Find-ServiceEndpoint
 Export-ModuleMember Get-ServiceEndpoint
+Export-ModuleMember New-SshServiceEndpoint
 Export-ModuleMember New-Release
 Export-ModuleMember Get-WorkItem
 Export-ModuleMember Get-WorkItemFields
