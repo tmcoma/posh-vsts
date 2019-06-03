@@ -648,6 +648,43 @@ function Set-Teamsettings {
     }
 }
 
+function Get-WorkItemsByBuild{
+[CmdletBinding()]
+    Param(
+        [Parameter(Position=1, Mandatory=$true)][int]$id
+	    )
+	
+    $config = Get-VstsConfig
+    $uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/build/builds/${id}/workitems?api-version=4.1"
+   
+    write-verbose $uri
+    $result = Invoke-RestMethod -Uri $uri -Method Get -ContentType "application/json" -Headers $config.GetHeaders()
+    if($result -Is [String]) {
+        Write-Error $result
+        throw "Rest Method Failed!"
+    }
+	
+	$json = ConvertTo-Json $result
+				
+    return $json
+
+}
+
+function Get-WorkItemsIdByBuild{
+[CmdletBinding()]
+    Param(
+        [Parameter(Position=1, Mandatory=$true)][int]$id
+    )
+   
+	$ids = Get-WorkItemsByBuild $id | convertfrom-json 
+	
+	foreach ($line in $ids.value) {
+		 $line.id
+	}
+}
+
+
+
 Export-ModuleMember VstsConfig
 Export-ModuleMember Set-VstsConfig
 Export-ModuleMember Get-VstsConfig
@@ -667,3 +704,5 @@ Export-ModuleMember Set-KanbanColumns
 Export-ModuleMember Get-KanbanBoards
 Export-ModuleMember Get-Teamsettings
 Export-ModuleMember Set-Teamsettings
+Export-ModuleMember Get-WorkItemsByBuild
+Export-ModuleMember Get-WorkItemsIdByBuild
