@@ -683,6 +683,50 @@ function Get-WorkItemsIdByBuild{
 	}
 }
 
+<#
+.SYNOPSIS
+Updates a Work Item
+
+.PARAMETER id 
+Id of the work item.
+.PARAMETER fields
+A map of fields, e.g.
+@{ 
+	"System.Title"="my task"
+	"System.Description"="my description"
+	"System.AssignedTo"="gaurav.shrestha@nebraska.gov" 
+	"Custom.Action"="some action"
+}
+
+#>
+function Update-WorkItem {
+    [CmdletBinding()]
+    Param(
+		[Parameter(Position=0, Mandatory=$true)][int]$id,
+		[Parameter(Mandatory=$true,Position=1)]$fields
+    )
+    $config = Get-VstsConfig
+	
+	$uri = "https://dev.azure.com/$($config.AccountName)/$($config.Project)/_apis/wit/workitems/${id}?api-version=4.1"
+	
+	write-verbose $uri
+	$patches = New-Object System.Collections.Generic.List[System.Object] 
+	
+	foreach($e in $fields.GetEnumerator()){
+	
+		$patches.Add(@{
+			op="add"
+			path="/fields/$($e.Name)"
+			value=$e.Value
+		})
+	}
+
+	$body=ConvertTo-Json $patches
+	write-verbose $body
+	
+	 Invoke-RestMethod -Uri $uri -Body $body -Method PATCH -ContentType "application/json-patch+json" -Headers $config.GetHeaders() -Verbose:$VerbosePreference -Debug
+
+}
 
 
 Export-ModuleMember VstsConfig
@@ -706,3 +750,4 @@ Export-ModuleMember Get-Teamsettings
 Export-ModuleMember Set-Teamsettings
 Export-ModuleMember Get-WorkItemsByBuild
 Export-ModuleMember Get-WorkItemsIdByBuild
+Export-ModuleMember Update-WorkItem
